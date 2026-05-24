@@ -1,0 +1,222 @@
+name: 🔒 Security Analysis Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened ]
+
+# Минимальные права доступа (принцип наименьших привилегий)
+permissions:
+  contents: read
+  security-events: write   # загрузка SARIF в GitHub Security Dashboard
+  pull-requests: write     # комментарии к PR с результатами
+
+jobs:
+
+  # ════════════════════════════════════════════════════════════════
+  # Задание 1: Semgrep SAST — статический анализ исходного кода
+  # ════════════════════════════════════════════════════════════════
+  semgrep-sast:
+    name: 🔍 Semgrep SAST
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep:1.62
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: |
+          mkdir -p results
+          semgrep ci \
+            --config p/android \
+            --config p/kotlin \
+            --config p/owasp-mobile-top-10 \
+            --config .semgrep/custom-rules.yaml \
+            --sarif-output=results/semgrep.sarif \
+            --json-output=results/semgrep.json \
+            --severity=ERROR \
+            --error
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Security Dashboard
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results/semgrep.sarif
+          category: semgrep-android
+
+      - name: Upload Semgrep JSON Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-results
+          path: results/
+          retention-days: 30
+
+  # ════════════════════════════════════════════════════════════════
+  # Задание 2: Detekt — статический анализ Kotlin-кода
+  # ════════════════════════════════════════════════════════════════
+  detekt-analysis:
+    name: 🧹 Detekt Kotlin Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Run Detekt
+        run: ./gradlew detekt --continue
+        continue-on-error: true
+
+      - name: Upload Detekt SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: app/build/reports/detekt/detekt.sarif
+          category: detekt-kotlin
+
+      - name: Upload Detekt HTML Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: detekt-report
+          path: app/build/reports/detekt/
+          retention-days: 30
+
+  # ════════════════════════════════════════════════════════════════
+  # Задание 3: Build + MobSF — анализ скомпилированного APK
+  # ════════════════════════════════════════════════════════════════
+  mobsf-analysis:
+    name: 📱 MobSF Static APK Analysis
+    runs-on: ubuntu-latest
+    needs: [ semgrep-sast ]     # запускать после Semgrep
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Find APK path
+        id: apk
+        run: |
+          APK=$(find . -name "*.apk" -path "*/debug/*" | head -1)
+          echo "path=$APK" >> $GITHUB_OUTPUT
+          echo "APK found: $APK"
+
+      - name: Start MobSF Docker container
+        run: |
+          docker run -d \
+            --name mobsf \
+            -p 8000:8000 \
+            -e DJANGO_SUPERUSER_USERNAME=admin \
+            -e DJANGO_SUPERUSER_PASSWORD=${{ secrets.MOBSF_PASSWORD }} \
+            opensecurity/mobile-security-framework-mobsf:latest
+          echo "Waiting for MobSF to start..."
+          sleep 60
+          curl -s http://localhost:8000 | grep -q "MobSF" && echo "MobSF is ready" || echo "MobSF check failed"
+
+      - name: Run MobSF Analysis
+        env:
+          MOBSF_URL: "http://localhost:8000"
+          MOBSF_API_KEY: ${{ secrets.MOBSF_API_KEY }}
+          APK_PATH: ${{ steps.apk.outputs.path }}
+          MIN_SCORE: "70"
+        run: python3 .github/scripts/mobsf_scan.py
+
+      - name: Upload MobSF PDF Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobsf-security-report
+          path: mobsf_report.pdf
+          retention-days: 30
+
+  # ════════════════════════════════════════════════════════════════
+  # Задание 4: Security Unit Tests
+  # ════════════════════════════════════════════════════════════════
+  security-unit-tests:
+    name: ✅ Security Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Run Security Unit Tests
+        run: ./gradlew test --tests "com.securevault.SecurityUnitTest" --info
+
+      - name: Publish Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Security Test Results
+          path: app/build/test-results/**/*.xml
+          reporter: java-junit
+          fail-on-error: true
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-test-results
+          path: app/build/test-results/
+          retention-days: 30
+
+  # ════════════════════════════════════════════════════════════════
+  # Финальный шаг: Summary Report
+  # ════════════════════════════════════════════════════════════════
+  security-summary:
+    name: 📊 Security Summary
+    runs-on: ubuntu-latest
+    needs: [ semgrep-sast, detekt-analysis, mobsf-analysis, security-unit-tests ]
+    if: always()
+
+    steps:
+      - name: Create Security Summary
+        run: |
+          echo "## 🔒 Security Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Tool | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Semgrep SAST | ${{ needs.semgrep-sast.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Detekt | ${{ needs.detekt-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| MobSF | ${{ needs.mobsf-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.security-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

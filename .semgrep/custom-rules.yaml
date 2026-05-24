@@ -1,0 +1,134 @@
+rules:
+  # ── M1: Improper Credential Usage ────────────────────────────────────────
+
+  - id: insecure-shared-preferences
+    patterns:
+      - pattern: getSharedPreferences(...)
+      - pattern-not-inside: EncryptedSharedPreferences.create(...)
+    message: >
+      [OWASP M9 / MASVS-STORAGE-1] Использование незашифрованного SharedPreferences.
+      Для хранения чувствительных данных используйте EncryptedSharedPreferences
+      из библиотеки AndroidX Security Crypto.
+    languages: [kotlin, java]
+    severity: ERROR
+    metadata:
+      owasp:   [M9:2024, M1:2024]
+      cwe:     CWE-312
+      masvs:   MASVS-STORAGE-1
+
+  - id: hardcoded-secret-string
+    patterns:
+      - pattern: |
+          val $KEY = "$VALUE"
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: >-
+            (?i)(api[_-]?key|secret[_-]?key|private[_-]?key|password|passwd|
+            token|access[_-]?token|auth[_-]?token|bearer|credential|api[_-]?secret)
+    message: >
+      [OWASP M1 / MASVS-CRYPTO-2] Возможное жёсткое кодирование чувствительного значения.
+      Используйте Android Keystore для хранения ключей или вынесите на серверную сторону.
+    languages: [kotlin, java]
+    severity: ERROR
+    metadata:
+      owasp:   [M1:2024]
+      cwe:     CWE-798
+      masvs:   MASVS-CRYPTO-2
+
+  # ── M5: Insecure Communication ────────────────────────────────────────────
+
+  - id: disabled-ssl-verification
+    pattern-either:
+      - pattern: |
+          .setHostnameVerifier(javax.net.ssl.HttpsURLConnection.ALLOW_ALL_HOSTNAME_VERIFIER)
+      - pattern: |
+          override fun verify($HOST: String, $SESSION: javax.net.ssl.SSLSession) = true
+      - pattern: |
+          .trustAllCerts(...)
+    message: >
+      [OWASP M5 / MASVS-NETWORK-1] Отключена проверка SSL-сертификата.
+      Это позволяет MITM-атаки. Никогда не отключайте проверку TLS в production.
+    languages: [kotlin, java]
+    severity: ERROR
+    metadata:
+      owasp:   [M5:2024]
+      cwe:     CWE-295
+      masvs:   MASVS-NETWORK-1
+
+  # ── M10: Insufficient Cryptography ───────────────────────────────────────
+
+  - id: weak-hash-algorithm-md5
+    pattern: MessageDigest.getInstance("MD5")
+    message: >
+      [OWASP M10 / MASVS-CRYPTO-1] Алгоритм MD5 криптографически небезопасен.
+      Используйте SHA-256 или SHA-3 для хеширования.
+    languages: [kotlin, java]
+    severity: ERROR
+    metadata:
+      owasp:   [M10:2024]
+      cwe:     CWE-327
+      masvs:   MASVS-CRYPTO-1
+
+  - id: weak-hash-algorithm-sha1
+    pattern-either:
+      - pattern: MessageDigest.getInstance("SHA1")
+      - pattern: MessageDigest.getInstance("SHA-1")
+    message: >
+      [OWASP M10 / MASVS-CRYPTO-1] SHA-1 считается устаревшим.
+      Используйте SHA-256 или SHA-3.
+    languages: [kotlin, java]
+    severity: ERROR
+    metadata:
+      owasp:   [M10:2024]
+      cwe:     CWE-327
+      masvs:   MASVS-CRYPTO-1
+
+  - id: weak-cipher-des
+    pattern-either:
+      - pattern: Cipher.getInstance("DES/...")
+      - pattern: Cipher.getInstance("DES")
+      - pattern: Cipher.getInstance("3DES")
+      - pattern: Cipher.getInstance("DESede/...")
+    message: >
+      [OWASP M10 / MASVS-CRYPTO-1] DES/3DES ненадёжны. Используйте AES-256-GCM.
+    languages: [kotlin, java]
+    severity: ERROR
+    metadata:
+      owasp:   [M10:2024]
+      cwe:     CWE-327
+      masvs:   MASVS-CRYPTO-1
+
+  # ── M6: Privacy Controls ──────────────────────────────────────────────────
+
+  - id: log-sensitive-data
+    pattern-either:
+      - pattern: Log.d($TAG, "...$PASSWORD...")
+      - pattern: Log.d($TAG, "...$TOKEN...")
+      - pattern: Log.d($TAG, "...$KEY...")
+      - pattern: println("...$PASSWORD...")
+    message: >
+      [OWASP M6 / MASVS-CODE-4] Возможная запись чувствительных данных в лог.
+      Используйте Timber и убедитесь, что логирование отключено в Release.
+    languages: [kotlin, java]
+    severity: WARNING
+    metadata:
+      owasp:   [M6:2024]
+      cwe:     CWE-532
+      masvs:   MASVS-CODE-4
+
+  # ── M3: Insecure Authentication ───────────────────────────────────────────
+
+  - id: biometric-without-crypto-object
+    patterns:
+      - pattern: $PROMPT.authenticate($INFO)
+      - pattern-not: $PROMPT.authenticate($INFO, BiometricPrompt.CryptoObject(...))
+    message: >
+      [OWASP M3 / MASVS-AUTH-1] Биометрическая аутентификация без CryptoObject.
+      Без CryptoObject результат аутентификации можно подделать через Frida hook.
+      Используйте BiometricPrompt.authenticate(promptInfo, CryptoObject(cipher)).
+    languages: [kotlin]
+    severity: WARNING
+    metadata:
+      owasp:   [M3:2024]
+      cwe:     CWE-287
+      masvs:   MASVS-AUTH-1

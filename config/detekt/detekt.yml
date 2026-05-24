@@ -1,0 +1,91 @@
+# Detekt configuration для SecureVault
+# Диплом: «Обеспечение ИБ в мобильных приложениях», Глава 3.2
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+output-reports:
+  active: true
+  exclude:
+    - 'TxtOutputReport'
+
+processors:
+  active: true
+
+console-reports:
+  active: true
+
+# ── Security rules (включены) ─────────────────────────────────────
+security:
+  active: true
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - Error
+      - Exception
+      - Throwable
+      - RuntimeException
+    allowedExceptionNameRegex: "_|(ignore|expected).*"
+  UnsafeCallOnNullableType:
+    active: true
+  SwallowedException:
+    active: true
+    allowedExceptionNameRegex: "_|(ignore|expected).*"
+
+# ── Potential bugs ─────────────────────────────────────────────────
+potential-bugs:
+  active: true
+  UncheckedCast:
+    active: true
+  ElseCaseInsteadOfExhaustiveWhen:
+    active: true
+  AvoidReferenceEquality:
+    active: true
+
+# ── Style ──────────────────────────────────────────────────────────
+style:
+  active: true
+  MagicNumber:
+    active: true
+    ignoreNumbers:
+      - '-1'
+      - '0'
+      - '1'
+      - '2'
+      - '256'    # AES-256 — допустимо
+      - '128'    # AES block size — допустимо
+      - '300'    # TTL секунды — допустимо
+    ignorePropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreEnums: true
+    ignoreConstantDeclaration: true
+  WildcardImport:
+    active: true
+    excludeImports:
+      - 'kotlinx.android.synthetic.*'
+
+# ── Complexity ─────────────────────────────────────────────────────
+complexity:
+  active: true
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+  LongMethod:
+    active: true
+    threshold: 60
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 10
+
+# ── Naming ─────────────────────────────────────────────────────────
+naming:
+  active: true
+  VariableNaming:
+    active: true
+    variablePattern: '[a-z][A-Za-z0-9]*'
+    privateVariablePattern: '_?[a-z][A-Za-z0-9]*'
+  ConstantNaming:
+    active: true
+    constantPattern: '[A-Z][_A-Z0-9]*'
