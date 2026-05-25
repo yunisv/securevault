@@ -11,6 +11,7 @@ permissions:
   contents: read
   security-events: write
   pull-requests: write
+  checks: write
 
 jobs:
 
@@ -144,8 +145,12 @@ jobs:
             --name mobsf \
             -p 8000:8000 \
             opensecurity/mobile-security-framework-mobsf:latest
-          echo "Waiting for MobSF to start..."
-          sleep 30
+          echo "Waiting for MobSF to be ready (up to 180s)..."
+          timeout 180 bash -c \
+            'until curl -sf http://localhost:8000/api_docs/ > /dev/null 2>&1; do
+               echo "  MobSF not ready yet..."; sleep 5
+             done'
+          echo "MobSF is ready!"
 
       - name: Install Python dependencies
         run: pip install requests beautifulsoup4
