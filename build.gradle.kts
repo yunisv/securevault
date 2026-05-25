@@ -12,8 +12,11 @@ detekt {
     config.setFrom("$rootDir/config/detekt/detekt.yml")
     buildUponDefaultConfig = true
     allRules = false
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     reports {
-        sarif { required.set(true) }
-        html  { required.set(true) }
+        sarif.required.set(true)
+        html.required.set(true)
     }
 }

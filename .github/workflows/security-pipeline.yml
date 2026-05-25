@@ -86,7 +86,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run Detekt
-        run: ./gradlew detekt --continue
+        run: ./gradlew detekt --continue --no-daemon
         continue-on-error: true
 
       - name: Upload Detekt SARIF
@@ -195,7 +195,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run Security Unit Tests
-        run: ./gradlew test --tests "com.securevault.SecurityUnitTest" --info
+        run: ./gradlew :app:testDebugUnitTest --tests "com.securevault.SecurityUnitTest" --no-daemon --info
 
       - name: Publish Test Report
         uses: dorny/test-reporter@v1
