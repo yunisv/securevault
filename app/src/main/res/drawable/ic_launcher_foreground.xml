@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Lock icon -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M54,28 C46.268,28 40,34.268 40,42 L40,48 L36,48 C33.791,48 32,49.791 32,52 L32,76 C32,78.209 33.791,80 36,80 L72,80 C74.209,80 76,78.209 76,76 L76,52 C76,49.791 74.209,48 72,48 L68,48 L68,42 C68,34.268 61.732,28 54,28 Z M54,34 C58.418,34 62,37.582 62,42 L62,48 L46,48 L46,42 C46,37.582 49.582,34 54,34 Z M54,58 C56.761,58 59,60.239 59,63 C59,64.861 57.989,66.488 56.5,67.366 L58,74 L50,74 L51.5,67.366 C50.011,66.488 49,64.861 49,63 C49,60.239 51.239,58 54,58 Z" />
+</vector>

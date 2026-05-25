@@ -27,19 +27,18 @@ fun AuthScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading    by remember { mutableStateOf(false) }
 
-    // Показываем биометрический диалог при открытии экрана
+    // Показываем диалог аутентификации при открытии экрана
     LaunchedEffect(Unit) {
         if (biometricManager.isBiometricAvailable()) {
-            triggerBiometricAuth(
-                manager    = biometricManager,
-                onSuccess  = {
+            biometricManager.authenticate(
+                onSuccess = {
                     Timber.i("User authenticated successfully")
                     onAuthSuccess()
                 },
-                onError    = { msg -> errorMessage = msg }
+                onError = { msg -> errorMessage = msg }
             )
         } else {
-            errorMessage = "Биометрическая аутентификация недоступна.\nНастройте PIN или отпечаток пальца."
+            errorMessage = "Аутентификация недоступна.\nНастройте PIN, графический ключ или отпечаток пальца."
         }
     }
 
@@ -74,8 +73,7 @@ fun AuthScreen(
             Button(
                 onClick = {
                     errorMessage = null
-                    triggerBiometricAuth(
-                        manager   = biometricManager,
+                    biometricManager.authenticate(
                         onSuccess = onAuthSuccess,
                         onError   = { msg -> errorMessage = msg }
                     )
@@ -101,14 +99,4 @@ fun AuthScreen(
             }
         }
     }
-}
-
-private fun triggerBiometricAuth(
-    manager: BiometricAuthManager,
-    onSuccess: () -> Unit,
-    onError: (String) -> Unit
-) {
-    // В реальном приложении здесь нужен Cipher из KeystoreManager
-    // Для демонстрации вызываем упрощённый callback
-    onSuccess()
 }

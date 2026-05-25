@@ -30,20 +30,19 @@ jobs:
       - name: Run Semgrep
         run: |
           mkdir -p results
-          semgrep ci \
+          semgrep scan \
             --config p/android \
             --config p/kotlin \
             --config p/owasp-mobile-top-10 \
             --config .semgrep/custom-rules.yaml \
-            --sarif-output=results/semgrep.sarif \
-            --json-output=results/semgrep.json \
-            --severity=ERROR \
-            --error
-        continue-on-error: true
+            --sarif \
+            --output results/semgrep.sarif \
+            --severity ERROR \
+            --error || true
 
       - name: Upload SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('results/semgrep.sarif') != ''
         with:
           sarif_file: results/semgrep.sarif
           category: semgrep-android
@@ -76,13 +75,16 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Run Detekt
         run: ./gradlew detekt --continue
         continue-on-error: true
 
       - name: Upload Detekt SARIF
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('app/build/reports/detekt/detekt.sarif') != ''
         with:
           sarif_file: app/build/reports/detekt/detekt.sarif
           category: detekt-kotlin
@@ -97,7 +99,6 @@ jobs:
 
   # ════════════════════════════════════════════════════════════════
   # Задание 3: Build APK + MobSF
-  # API-ключ получается АВТОМАТИЧЕСКИ из контейнера — secrets не нужны
   # ════════════════════════════════════════════════════════════════
   mobsf-analysis:
     name: 📱 MobSF Static APK Analysis
@@ -117,6 +118,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
@@ -126,15 +130,13 @@ jobs:
             --name mobsf \
             -p 8000:8000 \
             opensecurity/mobile-security-framework-mobsf:latest
-          echo "MobSF container started, waiting for boot..."
-          # Ждём пока контейнер полностью стартует
-          # API-ключ будет получен автоматически скриптом
+          echo "Waiting for MobSF to start..."
           sleep 30
 
       - name: Install Python dependencies
         run: pip install requests beautifulsoup4
 
-      - name: Run MobSF Analysis (auto API key)
+      - name: Run MobSF Analysis
         env:
           MOBSF_URL: "http://localhost:8000"
           MIN_SCORE: "70"
@@ -167,6 +169,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Run Security Unit Tests
         run: ./gradlew test --tests "com.securevault.SecurityUnitTest" --info

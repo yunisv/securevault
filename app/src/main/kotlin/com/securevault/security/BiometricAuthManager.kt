@@ -38,6 +38,33 @@ class BiometricAuthManager(private val activity: FragmentActivity) {
     }
 
     /**
+     * Инициирует аутентификацию без CryptoObject (PIN / Pattern / Password / Biometric).
+     */
+    fun authenticate(
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val biometricPrompt = BiometricPrompt(
+            activity,
+            executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    Timber.d("Authentication succeeded")
+                    onSuccess()
+                }
+                override fun onAuthenticationFailed() {
+                    Timber.w("Authentication failed (retry available)")
+                }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    Timber.e("Auth error [$errorCode]: $errString")
+                    onError(errString.toString())
+                }
+            }
+        )
+        biometricPrompt.authenticate(buildPromptInfo())
+    }
+
+    /**
      * Инициирует биометрическую аутентификацию с CryptoObject.
      *
      * @param cipher      Cipher, инициализированный с ключом из Android Keystore

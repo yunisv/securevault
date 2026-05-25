@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -90,7 +90,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Security, contentDescription = null,
+                    Icon(Icons.Default.Lock, contentDescription = null,
                          tint = MaterialTheme.colorScheme.secondary)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
@@ -155,18 +155,44 @@ fun DetailScreen(
             )
         }
     ) { padding ->
+        val demoContent = mapOf(
+            "1" to ("Пароль от Wi-Fi"          to "MySecureWifi_2024!"),
+            "2" to ("API-ключ сервиса"          to "sk-a1b2c3d4e5f6g7h8i9j0"),
+            "3" to ("Заметки"                   to "Важная заметка: встреча в пн 10:00"),
+            "4" to ("Реквизиты карты"            to "**** **** **** 4242  CVV: ***")
+        )
+        val (title, secret) = demoContent[recordId] ?: ("Запись #$recordId" to "—")
+
         Column(
-            modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+                .fillMaxSize()
         ) {
-            Text("🔐", style = MaterialTheme.typography.displayLarge)
-            Spacer(Modifier.height(16.dp))
-            Text("Запись #$recordId", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(8.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors   = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        text  = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text  = secret,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             Text(
-                "Содержимое зашифровано и доступно только после аутентификации",
-                style = MaterialTheme.typography.bodyMedium,
+                text  = "🔒 Зашифровано · AES-256-GCM",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

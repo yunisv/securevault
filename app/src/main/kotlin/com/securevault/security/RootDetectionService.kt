@@ -80,19 +80,17 @@ class RootDetectionService @Inject constructor(
     // ── Emulator Detection ────────────────────────────────────────────────
 
     fun isEmulator(): Boolean {
-        val detected = with(Build) {
-            FINGERPRINT.startsWith("generic")
-                || FINGERPRINT.startsWith("unknown")
-                || MODEL.contains("google_sdk")
-                || MODEL.contains("Emulator")
-                || MODEL.contains("Android SDK built for x86")
-                || MANUFACTURER.contains("Genymotion")
-                || (BRAND.startsWith("generic") && DEVICE.startsWith("generic"))
-                || PRODUCT == "sdk_gphone64_arm64"
-                || PRODUCT.contains("sdk")
-                || HARDWARE == "goldfish"
-                || HARDWARE == "ranchu"
-        }
+        val detected = Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.startsWith("unknown")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.MANUFACTURER.contains("Genymotion")
+                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+                || Build.PRODUCT == "sdk_gphone64_arm64"
+                || Build.PRODUCT.contains("sdk")
+                || Build.HARDWARE == "goldfish"
+                || Build.HARDWARE == "ranchu"
 
         if (detected) Timber.w("Emulator detected: model=${Build.MODEL}")
         return detected

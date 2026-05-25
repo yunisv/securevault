@@ -1,8 +1,8 @@
 package com.securevault.security
 
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.SharedPreferences
-import android.security.keystore.KeyProperties
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -32,13 +32,11 @@ class SecurityStorageManager @Inject constructor(
      * ключ доступен 5 минут после успешной биометрической аутентификации.
      */
     private val masterKey: MasterKey by lazy {
+        val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        val hasSecureLock = keyguard.isDeviceSecure
         MasterKey.Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .setUserAuthenticationRequired(
-                true,
-                300,                                  // тайм-аут 5 минут
-                KeyProperties.AUTH_BIOMETRIC_STRONG
-            )
+            .apply { if (hasSecureLock) setUserAuthenticationRequired(true, 300) }
             .setRequestStrongBoxBacked(true)
             .build()
     }
