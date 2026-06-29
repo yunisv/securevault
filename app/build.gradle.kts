@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,17 +9,31 @@ plugins {
     alias(libs.plugins.detekt)
 }
 
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
+}
+
 android {
     namespace   = "com.securevault"
     compileSdk  = 35
 
     defaultConfig {
         applicationId   = "com.securevault"
-        minSdk          = 24
+        minSdk          = 29
         targetSdk       = 35
         versionCode     = 1
         versionName     = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile     = file(localProps["RELEASE_STORE_FILE"] ?: "securevault-release.jks")
+            storePassword = localProps["RELEASE_STORE_PASSWORD"] as String? ?: ""
+            keyAlias      = localProps["RELEASE_KEY_ALIAS"] as String? ?: ""
+            keyPassword   = localProps["RELEASE_KEY_PASSWORD"] as String? ?: ""
+        }
     }
 
     buildTypes {
@@ -31,12 +47,12 @@ android {
             isDebuggable    = false
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig   = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
             buildConfigField("Boolean", "ENABLE_LOGGING", "false")
-            // Sign with your keystore in production
         }
     }
 

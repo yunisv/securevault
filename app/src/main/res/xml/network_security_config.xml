@@ -1,21 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Network Security Configuration — Certificate Pinning + запрет HTTP
+    Network Security Configuration
     Документация: https://developer.android.com/training/articles/security-config
+
+    Стратегия:
+    — base-config: запрет HTTP + нет доверенных CA (все соединения запрещены по умолчанию)
+    — domain-config: явно разрешаем ТОЛЬКО наш API-домен с Certificate Pinning
 -->
 <network-security-config>
 
-    <!-- Глобальный запрет незашифрованного HTTP-трафика -->
-    <base-config cleartextTrafficPermitted="false">
-        <trust-anchors>
-            <!-- Доверять только системным CA, НЕ пользовательским -->
-            <certificates src="system" />
-        </trust-anchors>
-    </base-config>
+    <!-- Максимально строгий base-config: запрет HTTP, нет доверенных CA -->
+    <base-config cleartextTrafficPermitted="false" />
 
-    <!-- Certificate Pinning для API-сервера -->
+    <!-- Certificate Pinning для API-сервера — единственный разрешённый домен -->
     <domain-config>
         <domain includeSubdomains="true">api.securevault.example.com</domain>
+
+        <!-- Доверять только системным CA для этого домена -->
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+
         <pin-set expiration="2027-06-01">
             <!--
                 SHA-256 хеш SPKI основного сертификата.
@@ -29,16 +34,5 @@
             <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
         </pin-set>
     </domain-config>
-
-    <!--
-        ТОЛЬКО для Debug-сборки: разрешить пользовательские CA
-        (нужно для перехвата трафика через Burp Suite при разработке).
-        В Release-сборке этот блок ИГНОРИРУЕТСЯ.
-    -->
-    <debug-overrides>
-        <trust-anchors>
-            <certificates src="user" />
-        </trust-anchors>
-    </debug-overrides>
 
 </network-security-config>

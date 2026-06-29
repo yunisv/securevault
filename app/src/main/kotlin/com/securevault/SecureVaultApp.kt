@@ -13,9 +13,9 @@ import timber.log.Timber
 class SecureVaultApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.ENABLE_LOGGING) {
             Timber.plant(Timber.DebugTree())
         }
-        // В Release-сборке Timber не инициализируется → нет вывода в logcat
+        // В Release-сборке ENABLE_LOGGING=false → Timber не инициализируется → нет вывода в logcat
     }
 }
